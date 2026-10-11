@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#071219">
+<title>PROJECT VAJRA V4 | IMM Engineering Workbench</title>
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
+</head>
+<body>
+<header>
+  <div class="brand"><span>⚡</span><div><b>PROJECT VAJRA</b><small>IMM ENGINEERING WORKBENCH · V4</small></div></div>
+  <nav><a href="#machine">3D MACHINE</a><a href="#process">PROCESS</a><a href="#hydraulics">HYDRAULICS</a><a href="#thermal">PID / THERMAL</a><a href="#plc">PLC LOGIC</a><a href="#faults">DIAGNOSTICS</a><a href="#ai">AI ASSISTANT</a></nav>
+  <div id="globalStatus" class="status">● READY</div>
+</header>
+<main>
+<section id="machine" class="machine-section">
+  <div class="viewer">
+    <div class="overlay top">INTERACTIVE 3D DIGITAL TWIN <span>DRAG TO ORBIT · SCROLL TO ZOOM</span></div>
+    <div id="scene"></div>
+    <div class="overlay bottom">2500 TON CLAMP CONCEPT · PP MATERIAL · HYDRAULIC DRIVE</div>
+  </div>
+  <aside class="console">
+    <div class="eyebrow">CYCLE CONTROL</div><h2>Machine Console</h2>
+    <div class="state-box"><span id="cycleState">READY</span><b id="cycleTime">0.00 s</b></div>
+    <div class="button-row"><button class="primary" id="startBtn">▶ START CYCLE</button><button id="stopBtn">■ STOP</button><button id="resetBtn">↺ RESET</button></div>
+    <div class="metric-grid">
+      <div><small>HYD PRESSURE</small><b id="hydLive">142 bar</b></div><div><small>SCREW POSITION</small><b id="screwLive">184 mm</b></div>
+      <div><small>MELT TEMP</small><b id="meltLive">228.0 °C</b></div><div><small>SHOT STATUS</small><b id="shotLive">IDLE</b></div>
+    </div>
+    <div class="note">Values are simulated and update from the model controls below. Not a connection to a real IMM or safety PLC.</div>
+  </aside>
+</section>
+
+<section id="process" class="section">
+  <div class="section-head"><div><span class="eyebrow">01 / PROCESS RECIPE</span><h1>Injection & Packing Profile</h1></div><button id="resetRecipe" class="subtle">Restore sample recipe</button></div>
+  <div class="recipe-grid">
+    <div class="panel"><h3>Editable recipe</h3>
+      <div class="field"><label for="shotVolume">Shot volume (cm³)</label><input id="shotVolume" type="number" min="1" max="10000" value="420"></div>
+      <div class="field"><label for="screwDia">Screw diameter (mm)</label><input id="screwDia" type="number" min="10" max="250" value="90"></div>
+      <div class="field"><label for="injTime">Fill time (s)</label><input id="injTime" type="number" min="0.1" max="30" step="0.1" value="2.1"></div>
+      <div class="field"><label for="packPressure">Packing pressure (bar)</label><input id="packPressure" type="number" min="0" max="2500" value="95"></div>
+      <div class="field"><label for="packTime">Packing time (s)</label><input id="packTime" type="number" min="0" max="60" step="0.1" value="2.4"></div>
+      <div class="field"><label for="coolTime">Cooling time (s)</label><input id="coolTime" type="number" min="0" max="180" step="0.5" value="12"></div>
+      <div class="field"><label for="switchover">V/P switchover position (mm)</label><input id="switchover" type="number" min="0" max="300" value="18"></div>
+      <button class="primary wide" id="calcProcess">RECALCULATE PROCESS</button>
+    </div>
+    <div class="panel"><h3>Calculated process indicators</h3><div class="result-grid">
+      <div><small>SCREW AREA</small><b id="screwArea">63.62 cm²</b></div>
+      <div><small>EST. SCREW STROKE</small><b id="stroke">66.1 mm</b></div>
+      <div><small>AVERAGE VOLUMETRIC FLOW</small><b id="flow">12.0 L/s</b></div>
+      <div><small>PACK PRESSURE SETPOINT</small><b id="packResult">95 bar</b></div>
+      <div><small>EST. CYCLE TARGET</small><b id="cycleTarget">18.9 s</b></div>
+      <div><small>V/P POSITION CHECK</small><b id="vpCheck">Within nominal range</b></div>
+    </div><p class="muted">First-principles estimates for review only. Actual values depend on machine-specific screw geometry, material rheology, pressure losses, mold/part geometry and controller definitions.</p></div>
+  </div>
+  <div class="panel trend-panel"><div class="panel-heading"><h3>Process pressure profile</h3><span class="legend"><i></i> Estimated pressure</span></div><canvas id="pressureChart"></canvas></div>
+</section>
+
+<section id="hydraulics" class="section">
+  <div class="section-head"><div><span class="eyebrow">02 / HYDRAULIC MODEL</span><h1>Pressure, Flow & Clamp Force</h1></div></div>
+  <div class="model-grid">
+    <div class="panel">
+      <h3>Hydraulic operating point</h3>
+      <div class="field"><label for="systemPressure">System pressure (bar)</label><input id="systemPressure" type="range" min="20" max="250" value="142"><output id="systemPressureOut">142 bar</output></div>
+      <div class="field"><label for="pumpFlow">Pump flow (L/min)</label><input id="pumpFlow" type="range" min="10" max="350" value="180"><output id="pumpFlowOut">180 L/min</output></div>
+      <div class="field"><label for="cylBore">Effective cylinder bore (mm)</label><input id="cylBore" type="range" min="50" max="500" value="320"><output id="cylBoreOut">320 mm</output></div>
+      <div class="field"><label for="hydEfficiency">Mechanical efficiency (%)</label><input id="hydEfficiency" type="range" min="50" max="98" value="85"><output id="hydEfficiencyOut">85%</output></div>
+    </div>
+    <div class="panel">
+      <h3>Model outputs</h3><div class="result-grid">
+        <div><small>HYDRAULIC POWER</small><b id="hydPower">42.6 kW</b></div>
+        <div><small>IDEAL CYLINDER FORCE</small><b id="cylForce">1,144 kN</b></div>
+        <div><small>EST. USEFUL FORCE</small><b id="usefulForce">972 kN</b></div>
+        <div><small>FLOW CONVERSION</small><b id="flowConversion">3.00 L/s</b></div>
+      </div><p class="muted">Cylinder outputs use the selected effective bore as a single equivalent cylinder. A real clamp may use multiple cylinders, linkage/mechanical advantage, differential areas, pressure limits and machine-specific force calibration.</p>
+    </div>
+  </div>
+  <div class="panel"><h3>Clamp tonnage check</h3><div class="clamp-grid">
+    <div class="field"><label for="projectedArea">Projected part area (cm²)</label><input id="projectedArea" type="number" min="1" max="100000" value="2400"></div>
+    <div class="field"><label for="cavityPressure">Cavity pressure estimate (bar)</label><input id="cavityPressure" type="number" min="1" max="2500" value="350"></div>
+    <div class="field"><label for="clampSafety">Design margin (%)</label><input id="clampSafety" type="number" min="0" max="100" value="15"></div>
+  </div><div class="result-grid"><div><small>EST. REQUIRED CLAMP FORCE</small><b id="requiredClamp">966 tonne-force</b></div><div><small>REFERENCE CLAMP CAPACITY</small><b>2,500 tonne-force</b></div><div><small>PRELIMINARY CHECK</small><b id="clampCheck" class="good">Under reference capacity</b></div></div><p class="muted">Simplified: force = cavity pressure × projected area × margin. Pressure is applied over total projected area. This does not replace mold-flow analysis or machine/mold safety review.</p></div>
+</section>
+
+<section id="thermal" class="section">
+  <div class="section-head"><div><span class="eyebrow">03 / PID TEMPERATURE</span><h1>Barrel Zones & Controller</h1></div><button class="subtle" id="thermalReset">Reset zones</button></div>
+  <div class="pid-layout"><div class="zones" id="zones"></div>
+    <div class="panel pid-panel"><h3>Selected zone PID tuning</h3>
+      <div class="field"><label for="pidZone">Zone</label><select id="pidZone"><option value="0">Feed</option><option value="1">Rear</option><option value="2">Middle</option><option value="3">Front</option><option value="4">Nozzle</option></select></div>
+      <div class="field"><label for="kp">Kp</label><input id="kp" type="number" min="0" max="100" step="0.1" value="4.0"></div>
+      <div class="field"><label for="ki">Ki</label><input id="ki" type="number" min="0" max="20" step="0.01" value="0.25"></div>
+      <div class="field"><label for="kd">Kd</label><input id="kd" type="number" min="0" max="100" step="0.1" value="1.2"></div>
+      <button class="primary wide" id="applyPid">APPLY PID GAINS</button>
+      <div class="note" id="pidMessage">Discrete-time educational PID with output clamped between 0% and 100%. Real heater/thermocouple dynamics are machine-specific.</div>
+    </div></div>
+  <div class="panel trend-panel"><div class="panel-heading"><h3>Setpoint vs process value</h3><span class="legend"><i></i> PV <i class="setpoint-key"></i> SP</span></div><canvas id="thermalChart"></canvas></div>
+</section>
+
+<section id="mold" class="section">
+  <div class="section-head"><div><span class="eyebrow">04 / MOLD & COOLING</span><h1>Core / Cavity Cooling Estimate</h1></div></div>
+  <div class="model-grid">
+    <div class="panel"><h3>Cooling assumptions</h3>
+      <div class="field"><label for="partMass">Part mass (kg)</label><input id="partMass" type="number" min="0.01" max="500" step="0.1" value="1.2"></div>
+      <div class="field"><label for="cp">PP specific heat (kJ/kg·K)</label><input id="cp" type="number" min="0.1" max="10" step="0.1" value="2.1"></div>
+      <div class="field"><label for="meltTemp">Melt temperature (°C)</label><input id="meltTemp" type="number" min="100" max="350" value="228"></div>
+      <div class="field"><label for="ejectTemp">Target ejection temperature (°C)</label><input id="ejectTemp" type="number" min="20" max="200" value="80"></div>
+      <div class="field"><label for="coolFlow">Total cooling-water flow (L/min)</label><input id="coolFlow" type="number" min="0.1" max="1000" step="0.1" value="9.5"></div>
+      <div class="field"><label for="waterRise">Water temperature rise (°C)</label><input id="waterRise" type="number" min="0.1" max="40" step="0.1" value="3.5"></div>
+      <button class="primary wide" id="calcCooling">CALCULATE COOLING DUTY</button>
+    </div>
+    <div class="panel"><h3>Cooling outputs</h3><div class="result-grid">
+      <div><small>SENSIBLE HEAT REMOVAL</small><b id="heatLoad">373 kJ</b></div>
+      <div><small>IDEAL WATER HEAT CAPACITY</small><b id="waterCapacity">2.32 kW</b></div>
+      <div><small>IDEAL ENERGY TIME</small><b id="idealCoolTime">160.8 s</b></div>
+      <div><small>SET CYCLE COOLING TIME</small><b id="setCoolTime">12.0 s</b></div>
+    </div><div id="coolingNotice" class="callout">Ideal energy balance only. Actual cooling time depends on wall thickness, thermal diffusivity, crystallization, channel distance and heat-transfer coefficients.</div></div>
+  </div>
+</section>
+
+<section id="plc" class="section">
+  <div class="section-head"><div><span class="eyebrow">05 / SEQUENCE CONTROL</span><h1>Editable PLC State Logic</h1></div><span class="pill">SIMULATION ONLY</span></div>
+  <div class="plc-layout">
+    <div class="panel"><h3>State sequence</h3><div id="sequenceSteps"></div></div>
+    <div class="panel"><h3>I/O and permissives</h3><div class="io-grid"><div><h4>INPUTS</h4><p><i class="on"></i> E001 Clamp closed</p><p><i class="on"></i> E002 Guard closed</p><p><i class="on"></i> E003 Hydraulic OK</p><p><i class="on"></i> E004 Temperature ready</p><p><i id="inCycle"></i> E005 Cycle active</p></div><div><h4>OUTPUTS</h4><p><i id="outClamp"></i> Y001 Clamp valve</p><p><i id="outInjection"></i> Y002 Injection valve</p><p><i id="outPack"></i> Y003 Pack/hold</p><p><i id="outCooling"></i> Y004 Cooling circuit</p><p><i id="outEject"></i> Y005 Ejector</p></div></div>
+    <div class="logic-editor"><h4>Transition times (seconds)</h4><div class="field"><label for="tClamp">Clamp close duration</label><input id="tClamp" type="number" min="0.1" max="30" step="0.1" value="1.2"></div><div class="field"><label for="tFill">Injection duration</label><input id="tFill" type="number" min="0.1" max="30" step="0.1" value="2.1"></div><div class="field"><label for="tPack">Pack/hold duration</label><input id="tPack" type="number" min="0.1" max="60" step="0.1" value="2.4"></div><div class="field"><label for="tOpen">Open/eject duration</label><input id="tOpen" type="number" min="0.1" max="30" step="0.1" value="1.2"></div><button class="primary wide" id="applyPLC">APPLY SEQUENCE</button></div></div>
+  </div>
+  <div class="note warning">This is an illustrative state-machine monitor, not safety-rated PLC logic. Never use it to control real machinery or bypass guards, interlocks, two-hand controls or emergency-stop circuits.</div>
+</section>
+
+<section id="faults" class="section">
+  <div class="section-head"><div><span class="eyebrow">06 / DIAGNOSTICS</span><h1>Fault Injection & Alarm Log</h1></div><button id="clearFaults" class="subtle">Clear faults</button></div>
+  <div class="fault-buttons"><button data-fault="pressure">Hydraulic pressure low</button><button data-fault="temperature">Barrel over-temperature</button><button data-fault="guard">Mold guard open</button><button data-fault="sensor">Injection sensor fault</button><button data-fault="cooling">Cooling flow low</button></div>
+  <div id="alarmBanner" class="alarm good">● NO ACTIVE FAULTS · simulated permissives healthy</div>
+  <div class="panel log-panel"><h3>Event log</h3><div id="eventLog"><p>System ready. No faults recorded.</p></div></div>
+</section>
+
+<section id="ai" class="section">
+  <div class="section-head"><div><span class="eyebrow">07 / VAJRA INTELLIGENCE</span><h1>AI Engineering Assistant</h1></div><span class="pill">ADVISORY ONLY</span></div>
+  <div class="ai-layout">
+    <div class="panel ai-chat">
+      <div class="ai-intro"><div class="ai-mark">V</div><div><h3>VAJRA AI</h3><p>Ask about the current simulated process, calculations, PLC sequence, thermal zones or alarms.</p></div></div>
+      <div id="aiMessages" class="ai-messages" aria-live="polite">
+        <div class="msg assistant"><b>VAJRA AI</b><p>Hello. I can explain simulator values, show the equations used, and suggest engineering checks. I do not control a real machine.</p></div>
+      </div>
+      <div class="suggestions">
+        <button data-ask="Explain my current process recipe and the calculated screw stroke.">Explain my recipe</button>
+        <button data-ask="Review the hydraulic estimates and explain the assumptions.">Explain hydraulics</button>
+        <button data-ask="Review the current thermal zones and PID model.">Review PID zones</button>
+        <button data-ask="What should I check when a fault is active?">Troubleshoot alarm</button>
+      </div>
+      <form id="aiForm" class="ai-form">
+        <textarea id="aiInput" rows="2" maxlength="1200" placeholder="Ask an engineering question..." aria-label="Question for VAJRA AI"></textarea>
+        <button class="primary" type="submit" id="aiSend">ASK AI ↗</button>
+      </form>
+      <p class="muted">This build uses a local engineering knowledge assistant with live simulator values. A cloud LLM is not connected yet.</p>
+    </div>
+    <aside class="panel ai-context">
+      <h3>Live context shared with assistant</h3>
+      <div class="context-row"><span>Cycle state</span><b id="aiContextState">READY</b></div>
+      <div class="context-row"><span>Hydraulic pressure</span><b id="aiContextPressure">142 bar</b></div>
+      <div class="context-row"><span>Melt temperature</span><b id="aiContextMelt">228.0 °C</b></div>
+      <div class="context-row"><span>Estimated cycle target</span><b id="aiContextCycle">18.9 s</b></div>
+      <div class="context-row"><span>Active fault</span><b id="aiContextFault">None</b></div>
+      <div class="context-warning">AI responses are advisory. Confirm production decisions with machine documentation, actual material data, validated process windows, and qualified personnel.</div>
+    </aside>
+  </div>
+</section>
+
+</main>
+<footer>PROJECT VAJRA V4 · Educational engineering simulation. Verify all calculations against machine manuals, actual process data and qualified engineering review before industrial use.</footer>
+<script type="module" src="app.js"></script>
+</body></html>
